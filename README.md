@@ -4,6 +4,7 @@ Alright, apparently there was some kind of strange interest in this. @Reiko: I c
 I understand that having to change configurable variables in both install and zendar.c is a tedious operation, I will centralize all variables in the install script eventually. I have a free weekend so expect that to happen this week. 
 @Reiko: I also removed ptrace() from the kit.
 
+```
 Default configuration variables:    (install)
                                     username = "zendar"
                                     password = "zendar123"
@@ -27,3 +28,4 @@ Installation & Usage:               (installation)
                                         export PS1='\u@zendar \W >> '
                                             (VITAL, YOU MUST ENABLE THE FOLLOWING!)
                                                 export ZENDAR='1'
+```
